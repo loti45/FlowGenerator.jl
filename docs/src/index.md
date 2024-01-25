@@ -2,13 +2,11 @@
 CurrentModule = FlowGenerator
 ```
 
-# FlowGenerator
+# Flow Generator
 
-Documentation for [FlowGenerator](https://github.com/loti45/FlowGenerator.jl).
-
-```@index
-```
+Public Interface of [FlowGenerator](https://github.com/loti45/FlowGenerator.jl).
 
 ```@autodocs
 Modules = [FlowGenerator]
 ```
+
