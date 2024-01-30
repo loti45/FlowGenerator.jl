@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Bin Packing Problem · FlowGenerator.jl</title><meta name="title" content="Bin Packing Problem · FlowGenerator.jl"/><meta property="og:title" content="Bin Packing Problem · FlowGenerator.jl"/><meta property="twitter:title" content="Bin Packing Problem · FlowGenerator.jl"/><meta name="description" content="Documentation for FlowGenerator.jl."/><meta property="og:description" content="Documentation for FlowGenerator.jl."/><meta property="twitter:description" content="Documentation for FlowGenerator.jl."/><meta property="og:url" content="https://loti45.github.io/FlowGenerator.jl/examples/bin_packing_problem/"/><meta property="twitter:url" content="https://loti45.github.io/FlowGenerator.jl/examples/bin_packing_problem/"/><link rel="canonical" href="https://loti45.github.io/FlowGenerator.jl/examples/bin_packing_problem/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">FlowGenerator.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><span class="tocitem">Getting started</span><ul><li><a class="tocitem" href="../../">Public interface</a></li><li><input class="collapse-toggle" id="menuitem-1-2" type="checkbox" checked/><label class="tocitem" for="menuitem-1-2"><span class="docs-label">Examples</span><i class="docs-chevron"></i></label><ul class="collapsed"><li class="is-active"><a class="tocitem" href>Bin Packing Problem</a></li></ul></li></ul></li><li><span class="tocitem">For developers</span><ul><li><a class="tocitem" href="../../internal/data_containers/">Data Containers</a></li><li><a class="tocitem" href="../../internal/mip_model/">Mip Model</a></li><li><a class="tocitem" href="../../internal/network_flow_model/">Network Flow Model</a></li><li><a class="tocitem" href="../../internal/network_flow_solver/">Network Flow Solver</a></li><li><a class="tocitem" href="../../internal/shortest_path_solver/">Shortest Path Solver</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Getting started</a></li><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Bin Packing Problem</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Bin Packing Problem</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/loti45/FlowGenerator.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/loti45/FlowGenerator.jl/blob/main/docs/src/examples/bin_packing_problem.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Bin-Packing-Problem"><a class="docs-heading-anchor" href="#Bin-Packing-Problem">Bin Packing Problem</a><a id="Bin-Packing-Problem-1"></a><a class="docs-heading-anchor-permalink" href="#Bin-Packing-Problem" title="Permalink"></a></h1><p>In the (one-dimensional) bin packing problem (BPP), we are given an unlimited number of bins with identical capacity <span>$W$</span>, and a set <span>$I$</span> of items. Each item <span>$i \in I$</span> is associated with a weight <span>$w_i$</span>. The objective of the problem is to pack all items into the minimum number of bins, while respecting the weight capacity of bins.</p><p>Here, we consider the classical arc-flow model for the BPP. For details on the model, we refer to the first paper that addressed it in practice:</p><p>Valério de Carvalho, J. M. Exact solution of bin‐packing problems using column generation and branch‐and‐bound. <em>Annals of Operations Research.</em> 86(0), 629-659 (1999).</p><p>The model has a vertex for each possible partial weight (which we call position) in a bin. There are two types of arcs, item arcs and loss arcs.</p><ul><li>Item arcs represent the placement of an arc in a position of an arbitrary bin. In particular, an item <span>$i$</span> has arcs like <span>$(u, u + w_i)$</span>, where <span>$u \in \{0,\ldots,W\}$</span> is a vertex representing a position in a bin.</li><li>Loss arcs represent unused space that accumulate at the end of a bin.</li></ul><p>Each complete path in this model represents a feasible packing of items in a single bin. The objective of minimizing the number of used bins is translated to minimizing the total flow over the network. This objective can be modelled in multiple ways. Here we choose to model it by setting a uniform cost of <span>$1$</span> to all arcs leaving the source. This effectively minimizes the number of bins since each unit of flow leaving the source represent the use of a bin.</p><p>The size of the graph depends on the sets of feasible positions for each item. There are many studies focusing on generating smaller sets of positions without losing optimality. For simplicity, we consider the seminal approach by Valério de Carvalho, which is based on the principle that items can be assumed to be left-aligned inside of a bin.</p><p>The following illustrates how to use FlowGenerator to construct and solve the classical arc-flow model for the BPP.</p><pre><code class="language-julia hljs">using FlowGenerator
+using HiGHS
+
+function solve_bin_packing(capacity::Int, weights::Vector{Int})
+    num_items = length(weights)
+
+    # builder for the network flow problem
+    builder = new_problem_builder()
+
+    # mapping of positions in a bin to vertices
+    position_to_vertex = Dict{Int,Vertex}()
+    position_to_vertex[0] = new_vertex!(builder)
+
+    # used to create constraints and to convert the network-based solution to a bin packing solution
+    arc_to_item = Dict{Arc,Int}()
+
+    # item arcs
+    for i in 1:num_items
+        # collect is used to ensure we iterate only over vertices created in previous iterations
+        current_positions = collect(keys(position_to_vertex))
+        for p in current_positions
+            if p + weights[i] &lt;= capacity
+                tail = position_to_vertex[p]
+                head = get!(position_to_vertex, p + weights[i], new_vertex!(builder))
+                arc = new_arc!(builder, tail, head; var_type = INTEGER)
+                arc_to_item[arc] = i
+                if p == 0
+                    set_cost!(builder, arc, 1.0)
+                end
+            end
+        end
+    end
+
+    # loss arcs
+    sink = get!(position_to_vertex, capacity, new_vertex!(builder))
+    for (p, vertex) in position_to_vertex
+        if p &lt; capacity
+            new_arc!(builder, vertex, sink; var_type = INTEGER)
+        end
+    end
+
+    # create a demand constraint for each item
+    item_to_demand_constraint = Dict(
+        i =&gt; new_constraint!(builder; lb = 1.0, ub = 1.0) for i in 1:num_items
+    )
+
+    # populate demand constraint coefficients
+    for (arc, item) in arc_to_item
+        set_constraint_coefficient!(builder, item_to_demand_constraint[item], arc, 1.0)
+    end
+
+    # new commodity from source to sink
+    flow_capacity = num_items # enough to support any feasible solution
+    commodity = new_commodity!(
+        builder, position_to_vertex[0], sink, 0.0, flow_capacity
+    )
+
+    # optimizing the problem
+    problem = get_problem(builder)
+    solution = optimize!(problem, HiGHS.Optimizer)
+
+    # converting network-flow solution to bin packing solution
+    bin_solution_list = Vector{Vector{Int}}()
+    for (path, flow) in get_path_to_flow_map(problem, solution, commodity)
+        bin_solution = get_bin_solution(arc_to_item, path)
+        num_bins = floor(Int, flow + 0.5) # rounding to deal with floating-point precision
+        append!(bin_solution_list, fill(bin_solution, num_bins))
+    end
+
+    return bin_solution_list
+end
+
+function get_bin_solution(arc_to_item, path)
+    bin_pattern = Vector{Int}()
+    for arc in get_arcs(path)
+        if haskey(arc_to_item, arc)
+            item = arc_to_item[arc]
+            push!(bin_pattern, item)
+        end
+    end
+    return bin_pattern
+end
+
+capacity = 100
+weights = [4, 6, 7, 24, 26, 32, 64, 68, 69]
+
+solve_bin_packing(capacity, weights)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../">« Public interface</a><a class="docs-footer-nextpage" href="../../internal/data_containers/">Data Containers »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.1 on <span class="colophon-date" title="Tuesday 30 January 2024 22:18">Tuesday 30 January 2024</span>. Using Julia version 1.10.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
