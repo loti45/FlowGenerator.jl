@@ -4,6 +4,7 @@ import ..DataContainers: IndexedMap, LinkedListMap, add_value!
 
 include("vertex.jl")
 include("arc.jl")
+include("hyper_tree.jl")
 include("path.jl")
 include("network.jl")
 include("objective_function.jl")

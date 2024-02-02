@@ -1,10 +1,11 @@
+# TODO : path should be moved to interface level and should represent a sequential path, without hyper-arcs
 struct Path
-    arc_to_multiplicity::Dict{Arc,Float64}
+    hyper_tree::HyperTree
     function Path(arc_to_multiplicity::Dict{Arc,Float64})
         if !is_path_balanced(arc_to_multiplicity)
             throw(ArgumentError("Path is not balanced"))
         end
-        return new(arc_to_multiplicity)
+        return new(HyperTree(arc_to_multiplicity))
     end
 
     function Path(arcs::Vector{Arc})
@@ -20,34 +21,22 @@ struct Path
             arc_to_multiplicity[arc] = mult
             mult *= arc.multiplier
         end
-        return new(arc_to_multiplicity)
+        return Path(arc_to_multiplicity)
     end
 end
 
 function new_path(arcs::Vector{Arc})
-    for i in 1:(length(arcs) - 1)
-        if arcs[i].head != arcs[i + 1].tail
-            throw(ArgumentError("Invalid arc sequence"))
-        end
-    end
-    arc_to_multiplicity = Dict{Arc,Float64}()
-    mult = 1.0
-    for i in length(arcs):-1:1
-        arc = arcs[i]
-        arc_to_multiplicity[arc] = mult
-        mult *= arc.multiplier
-    end
-    return Path(arc_to_multiplicity)
+    return Path(arcs)
 end
 
-Base.:(==)(p1::Path, p2::Path) = p1.arc_to_multiplicity == p2.arc_to_multiplicity
-Base.hash(p::Path, h::UInt) = hash(p.arc_to_multiplicity, h)
+Base.:(==)(p1::Path, p2::Path) = p1.hyper_tree == p2.hyper_tree
+Base.hash(p::Path, h::UInt) = hash(p.hyper_tree, h)
 
 function get_arc_to_multiplicity(path::Path)
-    return path.arc_to_multiplicity
+    return get_arc_to_multiplicity(path.hyper_tree)
 end
 
-get_multiplicity(path::Path, arc::Arc) = get(path.arc_to_multiplicity, arc, 0.0)
+get_multiplicity(path::Path, arc::Arc) = get(get_arc_to_multiplicity(path), arc, 0.0)
 
 function is_path_balanced(arc_to_multiplicity::Dict{Arc,Float64})
     balance = get_flow_conservation_balance(arc_to_multiplicity)
