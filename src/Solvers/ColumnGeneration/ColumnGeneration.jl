@@ -16,16 +16,14 @@ include("column_generation.jl")
 struct Solution
     primal_solution::PrimalSolution
     extended_dual_solution::ExtendedDualSolution
-    rmp_columns::Vector{AbstractColumn}
+    rmp_columns::Vector{MipModel.Column}
     arc_to_min_obj_val::IndexedMap{Arc,Float64}
 end
 
 function AbstractSolver.solve(
     problem::NetworkFlowModel.Problem,
     params::ColumnGenerationParams;
-    initial_columns::Vector{ColumnGeneration.AbstractColumn} = Vector{
-        ColumnGeneration.AbstractColumn
-    }(),
+    initial_columns::Vector{MipModel.Column} = MipModel.Column[],
 )
     pricing_solver = PricingSolver(problem, params)
     rmp = ColumnGenerationOptimizer(problem, params)

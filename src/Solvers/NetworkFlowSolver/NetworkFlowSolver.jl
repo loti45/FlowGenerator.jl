@@ -11,8 +11,8 @@ include("reduced_cost_fixing.jl")
         problem::NetworkFlowModel.Problem,
         params::NetworkFlowSolverParams;
         initial_paths::Vector{Tuple{Commodity,Path}} = Tuple{Commodity,Path}[],
-        initial_columns = ColumnGeneration.AbstractColumn[
-            ColumnGeneration.PathColumn(path, commodity) for (commodity, path) in initial_paths
+        initial_columns = MipModel.Column[
+            MipModel.Column(problem, path, commodity) for (commodity, path) in initial_paths
         ],
         obj_cutoff::Number = params.obj_cutoff,
         max_num_branching_levels::Int,
@@ -26,8 +26,8 @@ function AbstractSolver.solve(
     problem::NetworkFlowModel.Problem,
     params::NetworkFlowSolverParams;
     initial_paths::Vector{Tuple{Commodity,Path}} = Tuple{Commodity,Path}[],
-    initial_columns = ColumnGeneration.AbstractColumn[
-        ColumnGeneration.PathColumn(path, commodity) for (commodity, path) in initial_paths
+    initial_columns = MipModel.Column[
+        MipModel.Column(problem, path, commodity) for (commodity, path) in initial_paths
     ],
     obj_cutoff::Number = params.obj_cutoff,
     max_num_branching_levels::Int,
@@ -76,7 +76,7 @@ end
 function solve_by_unbalanced_branching(
     problem::NetworkFlowModel.Problem,
     params::NetworkFlowSolverParams,
-    initial_columns::Vector{ColumnGeneration.AbstractColumn},
+    initial_columns::Vector{MipModel.Column},
     obj_cutoff::Number,
     max_num_branching_levels::Int,
     lp_solution::PrimalSolution,

@@ -1,7 +1,7 @@
 function optimize_column_generation!(
     problem::NetworkFlowModel.Problem,
     params::ColumnGenerationParams;
-    initial_columns::Vector{AbstractColumn},
+    initial_columns::Vector{MipModel.Column},
     rmp = ColumnGenerationOptimizer(problem, params),
     pricing_solver = PricingSolver(problem, params),
 )
