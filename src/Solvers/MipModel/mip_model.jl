@@ -83,36 +83,30 @@ function optimize!(model::NetworkFlowMipModel; time_limit::Float64 = Inf)
 end
 
 """
-    add_path_var!(
+    add_column!(
         model::NetworkFlowMipModel,
-        commodity::Commodity,
-        path::Path;
-        cost = get_cost(model.problem, path),
+        column::Column,
     ) -> Bool
 
-Add a variable to the MIP model representing the flow of a commodity along a specific path.
-The variable is added only if the path is in the network of the problem and an equivalent variable does not already exist.
+Add a column/variable to the MIP model representing the flow of a commodity along a specific hyper-tree.
+The hyper-tree can represent a single hyper-arc, a partial hyper-tree, or a complete hyper-tree from the source to the sink of the commodity.
+The variable is added only if the hyper-tree is in the network of the problem and an equivalent variable does not already exist.
 
 # Returns
 - `true` if the variable was successfully added, otherwise `false`.
 """
-function add_path_var!(
-    model::NetworkFlowMipModel,
-    commodity::Commodity,
-    path::Path;
-    cost = get_cost(model.problem, path),
-)
-    if !(path in get_network(model.problem))
+function add_column!(model::NetworkFlowMipModel, column::Column)
+    if !(column.hyper_tree in get_network(model.problem))
         return false
     end
-    var = add_path_var!(model.commodity_to_flow_data[commodity], path, cost)
+    var = add_column!(model.commodity_to_flow_data[column.commodity], column)
     if isnothing(var)
         return false
     end
 
     # setting side constraints
     constr_index_to_coeff = Dict{Int,Float64}()
-    for (arc, mult) in get_arc_to_multiplicity(path)
+    for (arc, mult) in get_arc_to_multiplicity(column.hyper_tree)
         for (index, coeff) in NetworkFlowModel.get_constr_coeff_list(model.problem, arc)
             constr_index_to_coeff[index] =
                 get(constr_index_to_coeff, index, 0.0) + coeff * mult
@@ -122,49 +116,9 @@ function add_path_var!(
         set_normalized_coefficient(model.side_constrs[index], var, coeff)
     end
 
-    for (arc, multiplicity) in get_arc_to_multiplicity(path)
+    for (arc, multiplicity) in get_arc_to_multiplicity(column.hyper_tree)
         _set_capacity_coeff!(model, arc, var; multiplicity)
     end
-    return true
-end
-
-"""
-    add_arc_var!(
-        model::NetworkFlowMipModel,
-        commodity::Commodity,
-        arc::Arc;
-        cost = get_cost(model.problem, arc),
-        var_type = CONTINUOUS,
-    ) -> Bool
-
-Add a variable to the MIP model representing the flow of a commodity through a specific arc.
-The variable is added only if the arc is in the network of the problem and an equivalent variable does not already exist.
-
-# Returns
-- `true` if the variable was successfully added, otherwise `false`.
-"""
-function add_arc_var!(
-    model::NetworkFlowMipModel,
-    commodity::Commodity,
-    arc::Arc;
-    cost = get_cost(model.problem, arc),
-    var_type = CONTINUOUS,
-)
-    if !(arc in get_network(model.problem))
-        return false
-    end
-    var = add_arc_var!(model.commodity_to_flow_data[commodity], arc, cost; var_type)
-    if isnothing(var)
-        return false
-    end
-
-    # setting side constraints
-    for (index, coeff) in NetworkFlowModel.get_constr_coeff_list(model.problem, arc)
-        set_normalized_coefficient(model.side_constrs[index], var, coeff)
-    end
-
-    _set_capacity_coeff!(model, arc, var)
-
     return true
 end
 
@@ -234,19 +188,10 @@ function _set_capacity_coeff!(model, arc, var; multiplicity = 1.0)
 end
 
 """
-    get_paths(mip_model::NetworkFlowMipModel, commodity::Commodity) -> Vector{Path}
+    get_columns(mip_model::NetworkFlowMipModel, commodity::Commodity) -> Vector{Column}
 
-Get all paths associated with a variable for the given commodity.
+Get all columns associated with the given commodity.
 """
-function get_paths(mip_model::NetworkFlowMipModel, commodity::Commodity)
-    return get_paths(mip_model.commodity_to_flow_data[commodity])
-end
-
-"""
-    get_arcs(mip_model::NetworkFlowMipModel, commodity::Commodity) -> Vector{Arc}
-
-Get all arcs associated with a variable for the given commodity.
-"""
-function NetworkFlowModel.get_arcs(mip_model::NetworkFlowMipModel, commodity::Commodity)
-    return NetworkFlowModel.get_arcs(mip_model.commodity_to_flow_data[commodity])
+function get_columns(mip_model::NetworkFlowMipModel, commodity::Commodity)
+    return get_columns(mip_model.commodity_to_flow_data[commodity])
 end

@@ -1,14 +1,3 @@
-abstract type AbstractColumn end
-struct ArcColumn <: AbstractColumn
-    arc::Arc
-    commodity::Commodity
-end
-
-struct PathColumn <: AbstractColumn
-    path::NetworkFlowModel.Path
-    commodity::Commodity
-end
-
 mutable struct ColumnGenerationOptimizer
     rmp::MipModel.NetworkFlowMipModel # restricted master problem
     problem::NetworkFlowModel.Problem
@@ -34,38 +23,23 @@ function optimize!(cg_optimizer::ColumnGenerationOptimizer)
 end
 
 function get_current_columns(rmp::ColumnGenerationOptimizer)
-    output = AbstractColumn[]
+    output = MipModel.Column[]
     for commodity in get_commodities(rmp)
-        for path in get_paths(rmp.rmp, commodity)
-            push!(output, PathColumn(path, commodity))
-        end
-        for arc in get_arcs(rmp.rmp, commodity)
-            push!(output, ArcColumn(arc, commodity))
+        for column in get_columns(rmp.rmp, commodity)
+            push!(output, column)
         end
     end
     return output
 end
 
-NetworkFlowModel.get_arcs(column::PathColumn) = keys(get_arc_to_multiplicity(column.path))
-NetworkFlowModel.get_arcs(column::ArcColumn) = (column.arc,)
+"""
+    add_column!(cg::ColumnGenerationOptimizer, column::Column)
 
-function add_column!(cg::ColumnGenerationOptimizer, column::AbstractColumn)
-    commodity = column.commodity
-    output = false # true if the column was added
-    if cg.params.basis_kind isa ArcFlowBasis || column isa ArcColumn
-        for arc in get_arcs(column)
-            if MipModel.add_arc_var!(cg.rmp, commodity, arc)
-                output = true
-            end
-        end
-    elseif cg.params.basis_kind isa PathFlowBasis
-        if MipModel.add_path_var!(cg.rmp, commodity, column.path)
-            output = true
-        end
-    else
-        throw(ArgumentError("Unsupported solver kind"))
-    end
-    return output
+Add a column to the the underlying RMP if it does not already exist.
+Return true if the column was added, false otherwise.
+"""
+function add_column!(cg::ColumnGenerationOptimizer, column::MipModel.Column)
+    return MipModel.add_column!(cg.rmp, column)
 end
 
 function filter_rmp!(cg::ColumnGenerationOptimizer)

@@ -19,7 +19,6 @@ include("helpers.jl")
 
 export get_vertices,
     get_arcs,
-    compute_head,
     get_tail_multiplier_list,
     get_network,
     get_constraints,

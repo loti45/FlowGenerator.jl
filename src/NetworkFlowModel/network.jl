@@ -65,6 +65,15 @@ function Base.in(path::Path, network::Network)
 end
 
 """
+Base.in(hyper_tree::HyperTree, network::Network)
+
+Check if a hyper-tree is in the network.
+"""
+function Base.in(hyper_tree::HyperTree, network::Network)
+    return all(arc -> arc in network, get_arcs(hyper_tree))
+end
+
+"""
 filter_arcs(network::Network, predicate::Function)
 
 Return a copy of the network with only the arcs that satisfy a given predicate.

@@ -42,7 +42,8 @@ function AbstractSolver.solve(
             else
                 get_var_type(problem, arc)
             end
-            MipModel.add_arc_var!(mip_model, commodity, arc; var_type)
+            column = MipModel.Column(problem, arc, commodity)
+            MipModel.add_column!(mip_model, column)
         end
     end
 
@@ -50,5 +51,5 @@ function AbstractSolver.solve(
     return MipModel.get_primal_solution(mip_model)
 end
 
-export optimize!, get_primal_solution, get_dual_solution, get_paths
+export optimize!, get_primal_solution, get_dual_solution, get_columns
 end

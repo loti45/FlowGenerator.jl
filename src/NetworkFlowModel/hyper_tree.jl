@@ -9,9 +9,14 @@ struct HyperTree
         _is_hyper_tree_balanced(tree)
         return tree
     end
+
+    function HyperTree(arc::Arc)
+        return HyperTree(Dict(arc => 1.0))
+    end
 end
 
 get_arc_to_multiplicity(t::HyperTree) = t.arc_to_multiplicity
+get_arcs(t::HyperTree) = collect(keys(t.arc_to_multiplicity))
 get_head(t::HyperTree) = t.head
 get_tail_to_multiplier_map(t::HyperTree) = t.tail_to_multiplier
 

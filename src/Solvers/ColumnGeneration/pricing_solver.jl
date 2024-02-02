@@ -12,11 +12,20 @@ end
 
 function pricing!(pricing_solver::PricingSolver, primal_solution, dual_solution)
     update_with_new_dual(pricing_solver.extended_dual_solution, dual_solution)
-    columns = AbstractColumn[]
+    columns = MipModel.Column[]
 
     for commodity in get_commodities(pricing_solver.problem)
         for path in _generate_columns!(pricing_solver, commodity)
-            push!(columns, PathColumn(path, commodity))
+            basis_kind = pricing_solver.params.basis_kind
+            if basis_kind == PathFlowBasis()
+                push!(columns, MipModel.Column(pricing_solver.problem, path, commodity))
+            elseif basis_kind == ArcFlowBasis()
+                for arc in get_arcs(path)
+                    push!(columns, MipModel.Column(pricing_solver.problem, arc, commodity))
+                end
+            else
+                throw(ArgumentError("Unsupported basis kind $basis_kind"))
+            end
         end
     end
 

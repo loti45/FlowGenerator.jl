@@ -25,6 +25,10 @@ struct Path
     end
 end
 
+function HyperTree(path::Path)
+    return path.hyper_tree
+end
+
 function new_path(arcs::Vector{Arc})
     return Path(arcs)
 end
@@ -32,6 +36,7 @@ end
 Base.:(==)(p1::Path, p2::Path) = p1.hyper_tree == p2.hyper_tree
 Base.hash(p::Path, h::UInt) = hash(p.hyper_tree, h)
 
+get_arcs(path::Path) = get_arcs(path.hyper_tree)
 function get_arc_to_multiplicity(path::Path)
     return get_arc_to_multiplicity(path.hyper_tree)
 end
