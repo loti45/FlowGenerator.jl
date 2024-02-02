@@ -25,8 +25,7 @@ Base.@kwdef struct ColumnGenerationParams{S} <:
     min_rc_to_stop::Float64 = -1e-9
     basis_kind::AbstractBasisKind = PathFlowBasis()
     pricing_kind::AbstractPricingKind = ShortestPathPricing()
-    num_nonbasic_iter_delete_path::Int = 20
-    num_nonbasic_iter_delete_arc::Int = 20
+    num_zero_flow_iter_delete_column::Int = typemax(Int)
 end
 
 Base.@kwdef struct NetworkFlowSolverParams{S,T} <: AbstractSolverParams where {

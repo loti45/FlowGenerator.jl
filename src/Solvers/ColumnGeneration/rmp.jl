@@ -2,8 +2,7 @@ mutable struct ColumnGenerationOptimizer
     rmp::MipModel.NetworkFlowMipModel # restricted master problem
     problem::NetworkFlowModel.Problem
     params::ColumnGenerationParams
-    path_to_nonbasic_iterations_count::Dict{NetworkFlowModel.Path,Int}
-    arc_to_nonbasic_iterations_count::Dict{NetworkFlowModel.Arc,Int}
+    column_to_zero_flow_iter_count::Dict{MipModel.Column,Int}
 end
 
 NetworkFlowModel.get_network(cg::ColumnGenerationOptimizer) = get_network(cg.problem)
@@ -15,11 +14,22 @@ end
 
 function ColumnGenerationOptimizer(problem, params)
     rmp = MipModel.NetworkFlowMipModel(problem, params.lp_solver_params)
-    return ColumnGenerationOptimizer(rmp, problem, params, Dict(), Dict())
+    return ColumnGenerationOptimizer(rmp, problem, params, Dict())
 end
 
-function optimize!(cg_optimizer::ColumnGenerationOptimizer)
-    return MipModel.optimize!(cg_optimizer.rmp)
+function optimize!(cg::ColumnGenerationOptimizer)
+    MipModel.optimize!(cg.rmp)
+    for commodity in get_commodities(cg)
+        for (column, val) in MipModel.get_column_to_primal_value_map(cg.rmp, commodity)
+            if iszero(val)
+                cg.column_to_zero_flow_iter_count[column] =
+                    get(cg.column_to_zero_flow_iter_count, column, 0) + 1
+            else
+                cg.column_to_zero_flow_iter_count[column] = 0
+            end
+        end
+    end
+    return nothing
 end
 
 function get_current_columns(rmp::ColumnGenerationOptimizer)
@@ -43,17 +53,13 @@ function add_column!(cg::ColumnGenerationOptimizer, column::MipModel.Column)
 end
 
 function filter_rmp!(cg::ColumnGenerationOptimizer)
-    # TODO : filter columns that become non-attractive:
-    # - Columns with positive reduced cost
-    # - Columns keeping zero primal value for many iterations
-end
-
-function get_nonbasic_iteration_count(cg::ColumnGenerationOptimizer, path::Path)
-    return get(cg.path_to_nonbasic_iterations_count, path, 0)
-end
-
-function get_nonbasic_iteration_count(cg::ColumnGenerationOptimizer, arc::Arc)
-    return get(cg.arc_to_nonbasic_iterations_count, arc, 0)
+    for (column, it_count) in cg.column_to_zero_flow_iter_count
+        if it_count > cg.params.num_zero_flow_iter_delete_column
+            MipModel.delete_column_var!(cg.rmp, column)
+            delete!(cg.column_to_zero_flow_iter_count, column)
+        end
+    end
+    return nothing
 end
 
 function get_primal_solution(cg::ColumnGenerationOptimizer)
