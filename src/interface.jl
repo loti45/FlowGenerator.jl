@@ -1,5 +1,5 @@
 struct DoubleBoundedConstraint
-    arc_to_coefficient::Dict{Arc,Float64}
+    arc_index_to_coefficient::Dict{Int,Float64}
     lower_bound::Float64
     upper_bound::Float64
     violation_penalty_cost::Float64
@@ -69,18 +69,18 @@ struct NetworkFlowProblemBuilder
     arc_costs::Vector{Float64}
     arc_capacities::Vector{Float64}
     arc_var_types::Vector{VarType}
+end
 
-    function NetworkFlowProblemBuilder()
-        return new(
-            Vector{Vertex}(),
-            Vector{Arc}(),
-            Vector{Constraint}(),
-            Vector{Commodity}(),
-            Vector{Float64}(),
-            Vector{Float64}(),
-            Vector{VarType}(),
-        )
-    end
+function NetworkFlowProblemBuilder()
+    return NetworkFlowProblemBuilder(
+        Vector{Vertex}(),
+        Vector{Arc}(),
+        Vector{Constraint}(),
+        Vector{Commodity}(),
+        Vector{Float64}(),
+        Vector{Float64}(),
+        Vector{VarType}(),
+    )
 end
 
 """
@@ -297,7 +297,7 @@ function set_constraint_coefficient!(
     arc::Arc,
     coeff::Float64,
 )
-    constraint.arc_to_coefficient[arc] = coeff
+    constraint.arc_index_to_coefficient[arc.index] = coeff
     return nothing
 end
 
@@ -315,10 +315,13 @@ function _get_linear_constraints(builder::NetworkFlowProblemBuilder)
                 push!(ctrs_to_add, (LEQ, dbc.upper_bound))
             end
         end
+        arc_to_coefficient = Dict(
+            builder.arcs[i] => c for (i, c) in dbc.arc_index_to_coefficient
+        )
         for (constraint_type, RHS) in ctrs_to_add
             constraint = Constraint(
                 length(constraints) + 1,
-                dbc.arc_to_coefficient,
+                arc_to_coefficient,
                 constraint_type,
                 RHS,
                 dbc.violation_penalty_cost,
