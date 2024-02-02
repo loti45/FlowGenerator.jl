@@ -23,9 +23,7 @@ function pricing!(pricing_solver::PricingSolver, primal_solution, dual_solution)
     return columns
 end
 
-function _generate_columns!(
-    pricing_solver::PricingSolver, commodity::Commodity; multiple_paths::Bool = true
-)
+function _generate_columns!(pricing_solver::PricingSolver, commodity::Commodity)
     if isempty(get_arcs(pricing_solver.problem))
         return []
     end
@@ -33,6 +31,7 @@ function _generate_columns!(
     commodity_dual = NetworkFlowModel.get_commodity_dual(dual_solution, commodity)
     shortest_path_solution = pricing_solver.extended_dual_solution.commodity_to_shortest_path_solution[commodity]
 
+    multiple_paths = pricing_solver.params.pricing_kind.pseudo_complementary
     paths = if multiple_paths && !is_hyper_graph(get_network(pricing_solver.problem))
         _get_min_cover_shortest_paths(pricing_solver.problem, shortest_path_solution)
     else
