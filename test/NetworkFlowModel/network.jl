@@ -91,3 +91,36 @@
         @test_throws ErrorException FlowGenerator.topological_sort(network, [v1, v5])
     end
 end
+
+@testset "HyperTree" begin
+    problem_builder = FlowGenerator.new_problem_builder()
+
+    v0 = FlowGenerator.new_vertex!(problem_builder)
+    v1 = FlowGenerator.new_vertex!(problem_builder)
+    v2 = FlowGenerator.new_vertex!(problem_builder)
+    v3 = FlowGenerator.new_vertex!(problem_builder)
+    v4 = FlowGenerator.new_vertex!(problem_builder)
+    v5 = FlowGenerator.new_vertex!(problem_builder)
+    v6 = FlowGenerator.new_vertex!(problem_builder)
+
+    arc0 = FlowGenerator.new_arc!(problem_builder, (v0, 2.0), v1; cost = 1.0)
+    arc1 = FlowGenerator.new_arc!(problem_builder, (v1, 1.0), v2; cost = 0.0)
+    arc2 = FlowGenerator.new_arc!(problem_builder, (v1, 1.0), v3; cost = 3.0)
+    arc3 = FlowGenerator.new_arc!(
+        problem_builder, Dict(v2 => 0.5, v3 => 2.0), v4; cost = 4.0
+    )
+    arc4 = FlowGenerator.new_arc!(
+        problem_builder, Dict(v4 => 1.0, v5 => 2.0), v6; cost = 4.0
+    )
+
+    arc_to_multiplicity = Dict(
+        arc0 => 2.5, arc1 => 0.5, arc2 => 2.0, arc3 => 1.0, arc4 => 1.0
+    )
+    tree = FlowGenerator.NetworkFlowModel.HyperTree(arc_to_multiplicity)
+
+    @test FlowGenerator.get_head(tree) == v6
+    tail_to_multiplier = FlowGenerator.get_tail_to_multiplier_map(tree)
+    @test length(tail_to_multiplier) == 2
+    @test tail_to_multiplier[v0] == 5.0
+    @test tail_to_multiplier[v5] == 2.0
+end

@@ -19,13 +19,15 @@ include("helpers.jl")
 
 export get_vertices,
     get_arcs,
-    get_head,
+    compute_head,
     get_tail_multiplier_list,
     get_network,
     get_constraints,
     get_arc_to_multiplicity,
     topological_sort,
-    get_multiplicity
+    get_multiplicity,
+    get_head,
+    get_tail_to_multiplier_map
 export is_hyper_graph, is_hyper_arc
 export new_path, new_network
 
@@ -45,7 +47,7 @@ export push_constraint!, pop_constraint!
 export ConstraintType, GEQ, LEQ, EQ
 export VarType, INTEGER, CONTINUOUS
 
-export Vertex, Arc, Network, Path
+export Vertex, Arc, Network, Path, HyperTree
 export ObjectiveFunction, Commodity, Constraint, Problem
 export PrimalSolution, DualSolution
 
