@@ -195,3 +195,20 @@ Get all columns associated with the given commodity.
 function get_columns(mip_model::NetworkFlowMipModel, commodity::Commodity)
     return get_columns(mip_model.commodity_to_flow_data[commodity])
 end
+
+function get_column_to_primal_value_map(
+    mip_model::NetworkFlowMipModel, commodity::Commodity
+)
+    output = Dict{Column,Float64}()
+
+    for (column, var) in mip_model.commodity_to_flow_data[commodity].column_to_var
+        output[column] = value(var)
+    end
+
+    return output
+end
+
+function delete_column_var!(mip_model::NetworkFlowMipModel, column::Column)
+    delete_column_var!(mip_model.commodity_to_flow_data[column.commodity], column)
+    return nothing
+end

@@ -126,30 +126,16 @@ function get_flow_conservation_constraint!(
 end
 
 """
-    delete_arc_var!(flow_component::CommodityFlowComponent, arc::Arc)
+    delete_column!(flow_component::CommodityFlowComponent, column::Column)
 
-Delete an arc variable from the `CommodityFlowComponent` by setting the upper bound to 0 and removing it from assocaited data structures.
-
-Note: setting the variable upper bound to 0 is more efficient than effectively deleting the variable.
-"""
-function delete_arc_var!(flow_component::CommodityFlowComponent, arc::Arc)
-    #delete(cg.rmp, cg.arc_to_var[arc]) # setting upper bound to 0 is more efficient than deleting
-    set_upper_bound(flow_component.arc_to_var[arc], 0.0)
-    delete!(flow_component.arc_to_var, arc)
-    return nothing
-end
-
-"""
-    delete_path_var!(flow_component::CommodityFlowComponent, path::Path)
-
-Delete a path variable from the `CommodityFlowComponent` by setting the upper bound to 0 and removing it from assocaited data structures.
+Delete a column from the `CommodityFlowComponent` by setting the upper bound to 0 and removing it from assocaited data structures.
 
 Note: setting the variable upper bound to 0 is more efficient than deleting the variable.
 """
-function delete_path_var!(flow_component::CommodityFlowComponent, path::Path)
-    #delete(cg.rmp, cg.path_to_var[path]) # setting upper bound to 0 is more efficient than deleting
-    set_upper_bound(flow_component.path_to_var[path], 0.0)
-    delete!(flow_component.path_to_var, path)
+function delete_column_var!(flow_component::CommodityFlowComponent, column::Column)
+    #delete(cg.rmp, cg.column[column]) # setting upper bound to 0 is more efficient than deleting
+    set_upper_bound(flow_component.column_to_var[column], 0.0)
+    delete!(flow_component.column_to_var, column)
     return nothing
 end
 
