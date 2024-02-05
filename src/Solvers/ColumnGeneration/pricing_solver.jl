@@ -85,9 +85,9 @@ function _get_min_cover_shortest_paths(
         min_unit_flow_cost = ShortestPathSolver.get_min_unit_flow_cost(
             shortest_path_solution, arc
         )
-        for (side_constr_index, _) in NetworkFlowModel.get_constr_coeff_list(problem, arc)
-            if side_constr_to_best_arc_and_value[side_constr_index][2] > min_unit_flow_cost
-                side_constr_to_best_arc_and_value[side_constr_index] = (
+        for (constr, _) in NetworkFlowModel.get_constr_coeff_list(problem, arc)
+            if side_constr_to_best_arc_and_value[constr.index][2] > min_unit_flow_cost
+                side_constr_to_best_arc_and_value[constr.index] = (
                     arc, min_unit_flow_cost
                 )
             end

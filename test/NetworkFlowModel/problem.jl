@@ -18,16 +18,16 @@
     )
     FlowGenerator.push_constraint!(problem, ctr1)
     @test length(FlowGenerator.get_constraints(problem)) == 1
-    @test collect(FlowGenerator.get_constr_coeff_list(problem, arc1)) == [(1, 1.0)]
+    @test collect(FlowGenerator.get_constr_coeff_list(problem, arc1)) == [(ctr1, 1.0)]
     @test collect(FlowGenerator.get_constr_coeff_list(problem, arc2)) == []
     FlowGenerator.push_constraint!(problem, ctr2)
     @test length(FlowGenerator.get_constraints(problem)) == 2
     @test collect(FlowGenerator.get_constr_coeff_list(problem, arc1)) ==
-        [(2, 1.0), (1, 1.0)]
-    @test collect(FlowGenerator.get_constr_coeff_list(problem, arc2)) == [(2, 3.0)]
+        [(ctr2, 1.0), (ctr1, 1.0)]
+    @test collect(FlowGenerator.get_constr_coeff_list(problem, arc2)) == [(ctr2, 3.0)]
     FlowGenerator.pop_constraint!(problem)
     @test length(FlowGenerator.get_constraints(problem)) == 1
-    @test collect(FlowGenerator.get_constr_coeff_list(problem, arc1)) == [(1, 1.0)]
+    @test collect(FlowGenerator.get_constr_coeff_list(problem, arc1)) == [(ctr1, 1.0)]
     @test collect(FlowGenerator.get_constr_coeff_list(problem, arc2)) == []
     FlowGenerator.pop_constraint!(problem)
     @test length(FlowGenerator.get_constraints(problem)) == 0

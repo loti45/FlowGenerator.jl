@@ -22,11 +22,10 @@ function get_arc_coeff_list(
 end
 
 function push_constraint!(
-    arc_to_side_constr_coeffs::LinkedListMap{Tuple{Int,Float64}}, constr::Constraint
+    arc_to_side_constr_coeffs::LinkedListMap{Tuple{Constraint,Float64}}, constr::Constraint
 )
-    constr_index = constr.index
     for (arc, coeff) in NetworkFlowModel.get_arc_coeff_list(constr)
-        add_value!(arc_to_side_constr_coeffs, arc.index, (constr_index, coeff))
+        add_value!(arc_to_side_constr_coeffs, arc.index, (constr, coeff))
     end
     return nothing
 end

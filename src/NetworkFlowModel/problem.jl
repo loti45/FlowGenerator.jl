@@ -54,7 +54,7 @@ struct Problem
     commodities::Vector{Commodity}
 
     # aux fields
-    arc_to_side_constr_coeffs::LinkedListMap{Tuple{Int,Float64}}
+    arc_to_side_constr_coeffs::LinkedListMap{Tuple{Constraint,Float64}}
 
     function Problem(
         network::Network,
@@ -126,13 +126,13 @@ end
 
 function pop_constraint!(problem::Problem)
     constraint = pop!(problem.constraints)
-    pop!(problem.arc_to_side_constr_coeffs, pair -> pair[1] == constraint.index)
+    pop!(problem.arc_to_side_constr_coeffs, pair -> pair[1] == constraint)
     return nothing
 end
 
 function _get_arc_to_side_constr_coeffs(arcs, constraints)
     num_arcs = length(arcs)
-    output = LinkedListMap{Tuple{Int,Float64}}(num_arcs)
+    output = LinkedListMap{Tuple{Constraint,Float64}}(num_arcs)
 
     for constr in constraints
         push_constraint!(output, constr)
