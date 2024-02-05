@@ -53,3 +53,34 @@ function get_commodity_dual(dual_solution::DualSolution, commodity::Commodity)
     return dual_solution.commodity_to_demand_dual_map[commodity] +
            dual_solution.commodity_to_capacity_dual_map[commodity]
 end
+
+"""
+    fill_arc_to_reduced_cost_map!(arc_to_reduced_cost_map::AbstractDict{Arc,Float64}, problem::Problem, dual_solution::DualSolution)
+
+Fill the `arc_to_reduced_cost_map` with the reduced cost of each arc.
+"""
+function fill_arc_to_reduced_cost_map!(arc_to_reduced_cost_map::AbstractDict{Arc,Float64}, problem::Problem, dual_solution::DualSolution)
+    dual_solution = dual_solution
+    side_constrs_dual = Vector{Float64}()
+    for constr in get_constraints(problem)
+        push!(
+            side_constrs_dual,
+            NetworkFlowModel.get_side_constraint_dual(dual_solution, constr),
+        )
+    end
+
+    for arc in get_arcs(problem)
+        arc_to_reduced_cost_map[arc] =
+            get_cost(problem, arc) - sum(
+                coeff * side_constrs_dual[constr_index] for (constr_index, coeff) in
+                NetworkFlowModel.get_constr_coeff_list(problem, arc);
+                init = 0.0,
+            )
+    end
+
+    for (arc, dual) in dual_solution.arc_capacity_to_dual_map
+        arc_to_reduced_cost_map[arc] -= dual
+    end
+
+    return nothing
+end

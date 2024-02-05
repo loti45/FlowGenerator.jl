@@ -55,31 +55,11 @@ end
 
 # having this fill function separated, helps Julia with compile optimization
 function _fill_arc_to_reduced_cost_map!(extended_dual_solution::ExtendedDualSolution)
-    dual_solution = extended_dual_solution.dual_solution
-    side_constrs_dual = Vector{Float64}()
-    for constr in get_constraints(extended_dual_solution.problem)
-        push!(
-            side_constrs_dual,
-            NetworkFlowModel.get_side_constraint_dual(dual_solution, constr),
-        )
-    end
-
-    problem = extended_dual_solution.problem
-
-    for arc in get_arcs(problem)
-        extended_dual_solution.arc_to_reduced_cost[arc] =
-            get_cost(problem, arc) - sum(
-                coeff * side_constrs_dual[constr_index] for (constr_index, coeff) in
-                NetworkFlowModel.get_constr_coeff_list(extended_dual_solution.problem, arc);
-                init = 0.0,
-            )
-    end
-
-    for (arc, dual) in dual_solution.arc_capacity_to_dual_map
-        extended_dual_solution.arc_to_reduced_cost[arc] -= dual
-    end
-
-    return nothing
+    return NetworkFlowModel.fill_arc_to_reduced_cost_map!(
+        extended_dual_solution.arc_to_reduced_cost,
+        extended_dual_solution.problem,
+        extended_dual_solution.dual_solution,
+    )
 end
 
 # Computes Lagrangian dual bound.
