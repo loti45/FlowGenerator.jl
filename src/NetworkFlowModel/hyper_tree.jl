@@ -19,6 +19,8 @@ get_arc_to_multiplicity(t::HyperTree) = t.arc_to_multiplicity
 get_arcs(t::HyperTree) = collect(keys(t.arc_to_multiplicity))
 get_head(t::HyperTree) = t.head
 get_tail_to_multiplier_map(t::HyperTree) = t.tail_to_multiplier
+get_multiplicity(t::HyperTree, arc::Arc) = t.arc_to_multiplicity[arc]
+is_tail(t::HyperTree, v::Vertex) = haskey(t.tail_to_multiplier, v)
 
 Base.:(==)(t1::HyperTree, t2::HyperTree) = t1.arc_to_multiplicity == t2.arc_to_multiplicity
 Base.hash(t::HyperTree, h::UInt) = hash(t.arc_to_multiplicity, h)
@@ -93,4 +95,31 @@ function _is_hyper_tree_balanced(hyper_tree::HyperTree)
             end
         end
     end
+end
+
+"""
+    function propagate_costs(hyper_tree::HyperTree; arc_to_cost::Function, tail_to_cost::Function)
+
+Propagate costs along the hyper tree from tails towards the head.
+"""
+function propagate_costs(tree::HyperTree; arc_to_cost::Function, tail_to_cost::Function)
+
+    vertex_to_incoming_arcs = _get_vertex_to_incoming_arcs_dictionary(get_arcs(tree))
+    get_incoming_arc = v -> is_tail(tree, v) ? nothing : only(vertex_to_incoming_arcs[v])
+
+    vertex_to_cost = Dict{Vertex, Float64}()
+    function get_cost!(v::Vertex)
+        if !haskey(vertex_to_cost, v)
+            arc = get_incoming_arc(v)
+            vertex_to_cost[v] = if !isnothing(arc)
+                (arc_to_cost(arc) + sum(get_cost!(tail) * mult for (tail, mult) in get_tail_multiplier_list(arc))) * get_multiplicity(tree, arc)
+            else
+                tail_to_cost(v)
+            end
+        end
+        return vertex_to_cost[v]
+    end
+
+    get_cost!(get_head(tree))
+    return vertex_to_cost
 end
