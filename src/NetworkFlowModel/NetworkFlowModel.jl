@@ -33,7 +33,7 @@ export new_path, new_network
 export filter_arcs
 
 export get_constr_coeff_list
-export get_cost, get_coefficient, get_capacity, get_var_type
+export get_cost, get_coefficient, get_capacity, get_var_type, has_capacity
 export get_intermediate_vertices, get_commodities, get_outgoing_arcs
 export get_arc_to_flow_map,
     get_obj_val,

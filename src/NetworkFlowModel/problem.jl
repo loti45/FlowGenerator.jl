@@ -108,6 +108,7 @@ get_commodities(problem::Problem) = problem.commodities
 get_cost(problem::Problem, arc::Arc) = get_cost(problem.objective_function, arc)
 get_cost(problem::Problem, path::Path) = get_cost(problem.objective_function, path)
 get_capacity(problem::Problem, arc::Arc) = problem.arc_to_capacity_map[arc]
+has_capacity(problem::Problem, arc::Arc) = !isinf(problem.arc_to_capacity_map[arc])
 
 function get_var_type(problem::Problem, arc::Arc)
     return problem.arc_to_var_type_map[arc]

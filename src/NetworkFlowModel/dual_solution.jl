@@ -29,7 +29,7 @@ function get_obj_val(problem::Problem, dual_solution::DualSolution)
     )
     output += sum(
         dual_solution.arc_capacity_to_dual_map[arc] * get_capacity(problem, arc) for
-        arc in get_arcs(problem) if get_capacity(problem, arc) < Inf;
+        arc in get_arcs(problem) if has_capacity(problem, arc);
         init = 0.0,
     )
     return output
