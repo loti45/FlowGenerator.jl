@@ -44,6 +44,10 @@ function get_side_constraint_dual(dual_solution::DualSolution, constraint::Const
     return dual_solution.side_constraint_to_dual_map[constraint]
 end
 
+function get_arc_capacity_dual(problem::Problem, dual_solution::DualSolution, arc::Arc)
+    return has_capacity(problem, arc) ? dual_solution.arc_capacity_to_dual_map[arc] : 0.0
+end
+
 """
     get_commodity_dual(dual_solution::DualSolution, commodity::Commodity)
 
@@ -60,15 +64,9 @@ end
 Fill the `arc_to_reduced_cost_map` with the reduced cost of each arc.
 """
 function fill_arc_to_reduced_cost_map!(arc_to_reduced_cost_map::AbstractDict{Arc,Float64}, problem::Problem, dual_solution::DualSolution)
-    dual_solution = dual_solution
 
     for arc in get_arcs(problem)
-        arc_to_reduced_cost_map[arc] =
-            get_cost(problem, arc) - sum(
-                coeff * NetworkFlowModel.get_side_constraint_dual(dual_solution, constr) for (constr, coeff) in
-                NetworkFlowModel.get_constr_coeff_list(problem, arc);
-                init = 0.0,
-            )
+        arc_to_reduced_cost_map[arc] = get_arc_reduced_cost(problem, dual_solution, arc; capacity_dual = 0.0)
     end
 
     for (arc, dual) in dual_solution.arc_capacity_to_dual_map
@@ -76,4 +74,17 @@ function fill_arc_to_reduced_cost_map!(arc_to_reduced_cost_map::AbstractDict{Arc
     end
 
     return nothing
+end
+
+"""
+    get_arc_reduced_cost(problem::Problem, dual_solution::DualSolution, arc::Arc; capacity_dual = get_arc_capacity_dual(problem, dual_solution, arc))
+
+Get the reduced cost of an arc based on the dual solution. The reduced cost is computed based on side constraint and capacity dual values, but not on commodity and flow conservation dual values.
+"""
+function get_arc_reduced_cost(problem::Problem, dual_solution::DualSolution, arc::Arc; capacity_dual = get_arc_capacity_dual(problem, dual_solution, arc))
+    return get_cost(problem, arc) - sum(
+        coeff * NetworkFlowModel.get_side_constraint_dual(dual_solution, constr) for (constr, coeff) in
+        NetworkFlowModel.get_constr_coeff_list(problem, arc);
+        init = 0.0,
+    ) + capacity_dual
 end

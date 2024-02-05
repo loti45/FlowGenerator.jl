@@ -1,21 +1,22 @@
-struct PricingSolver
+mutable struct PricingSolver
     problem::NetworkFlowModel.Problem
     params::ColumnGenerationParams
-    extended_dual_solution::ExtendedDualSolution
+    sp_solver::BidirectionalSubproblemSolver
+    sp_solution::Union{ExactSubproblemSolution,Nothing}
 
     function PricingSolver(
         problem::NetworkFlowModel.Problem, params::ColumnGenerationParams
     )
-        return new(problem, params, ExtendedDualSolution(problem))
+        return new(problem, params, BidirectionalSubproblemSolver(problem), nothing)
     end
 end
 
 function pricing!(pricing_solver::PricingSolver, primal_solution, dual_solution)
-    update_with_new_dual(pricing_solver.extended_dual_solution, dual_solution)
+    pricing_solver.sp_solution = solve!(pricing_solver.sp_solver, dual_solution)
     columns = MipModel.Column[]
 
     for commodity in get_commodities(pricing_solver.problem)
-        for path in _generate_columns!(pricing_solver, commodity)
+        for path in _generate_columns!(pricing_solver, commodity, dual_solution)
             basis_kind = pricing_solver.params.basis_kind
             if basis_kind == PathFlowBasis()
                 push!(columns, MipModel.Column(pricing_solver.problem, path, commodity))
@@ -32,13 +33,12 @@ function pricing!(pricing_solver::PricingSolver, primal_solution, dual_solution)
     return columns
 end
 
-function _generate_columns!(pricing_solver::PricingSolver, commodity::Commodity)
+function _generate_columns!(pricing_solver::PricingSolver, commodity::Commodity, dual_solution::DualSolution)
     if isempty(get_arcs(pricing_solver.problem))
         return []
     end
-    dual_solution = pricing_solver.extended_dual_solution.dual_solution
     commodity_dual = NetworkFlowModel.get_commodity_dual(dual_solution, commodity)
-    shortest_path_solution = pricing_solver.extended_dual_solution.commodity_to_shortest_path_solution[commodity]
+    shortest_path_solution = pricing_solver.sp_solution.commodity_to_shortest_path_solution[commodity]
 
     multiple_paths = pricing_solver.params.pricing_kind.pseudo_complementary
     paths = if multiple_paths && !is_hyper_graph(get_network(pricing_solver.problem))
@@ -64,7 +64,7 @@ function _generate_columns!(pricing_solver::PricingSolver, commodity::Commodity)
 
     filter!(p -> reduced_cost(p) < pricing_solver.params.min_rc_to_stop, paths)
 
-    dual_bound = get_dual_bound(pricing_solver.extended_dual_solution)
+    dual_bound = get_dual_bound(pricing_solver.sp_solution)
 
     println(
         "+ CG \t | dual bound $(round(dual_bound, digits = 4)) \t| min RC = $(round(min_rc, digits=4)) \t| generated $(length(paths)) paths",
