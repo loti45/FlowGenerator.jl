@@ -6,7 +6,6 @@ mutable struct BidirectionalSubproblemSolver <: ExactSubproblemSolver
     commodity_to_shortest_path_generator::Dict{
         Commodity,ShortestPathSolver.ShortestPathGenerator
     }
-    arc_to_reduced_cost::IndexedMap{Arc,Float64} # Auxiliary map that's re-populated at each pricing iteration
 
     function BidirectionalSubproblemSolver(problem::NetworkFlowModel.Problem)
         commodity_to_shortest_path_generator = Dict(
@@ -17,7 +16,6 @@ mutable struct BidirectionalSubproblemSolver <: ExactSubproblemSolver
         return new(
             problem,
             commodity_to_shortest_path_generator,
-            IndexedMap{Arc,Float64}(get_arcs(problem); default = Inf),
         )
     end
 end
@@ -88,20 +86,14 @@ end
 
 
 function solve!(
-    sp_solver::BidirectionalSubproblemSolver, dual_solution::DualSolution
+    sp_solver::BidirectionalSubproblemSolver, dual_solution::DualSolution, arc_to_reduced_cost::IndexedMap{Arc,Float64}
 )
-    NetworkFlowModel.fill_arc_to_reduced_cost_map!(
-        sp_solver.arc_to_reduced_cost,
-        sp_solver.problem,
-        dual_solution,
-    )
-
     commodity_to_shortest_path_solution = Dict{Commodity,ShortestPathSolver.ShortestPathSolution}()
     for commodity in get_commodities(sp_solver.problem)
         shortest_path_generator = sp_solver.commodity_to_shortest_path_generator[commodity]
         solution = ShortestPathSolver.generate_shortest_path(
             get_network(sp_solver.problem),
-            sp_solver.arc_to_reduced_cost;
+            arc_to_reduced_cost;
             solver = shortest_path_generator,
         )
         commodity_to_shortest_path_solution[commodity] = solution
@@ -120,5 +112,23 @@ function get_min_reduced_cost_in_a_commodity(sp_solution::BidirectionalSubproble
         ShortestPathSolver.get_min_unit_flow_cost(sol, arc) for
         sol in values(sp_solution.commodity_to_shortest_path_solution);
         init = Inf,
+    )
+end
+
+function get_optimal_path(sp_solution::BidirectionalSubproblemSolution, commodity::Commodity)
+    return ShortestPathSolver.get_optimal_path(
+        sp_solution.commodity_to_shortest_path_solution[commodity], commodity.sink
+    )
+end
+
+function get_shortest_path_cost(sp_solution::BidirectionalSubproblemSolution, commodity::Commodity, arc::Arc)
+    return ShortestPathSolver.get_min_unit_flow_cost(
+        sp_solution.commodity_to_shortest_path_solution[commodity], arc
+    )
+end
+
+function get_shortest_path(sp_solution::BidirectionalSubproblemSolution, commodity::Commodity, arc::Arc)
+    return ShortestPathSolver.get_min_unit_flow_path(
+        sp_solution.commodity_to_shortest_path_solution[commodity], arc
     )
 end

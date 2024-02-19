@@ -26,7 +26,9 @@ export get_vertices,
     topological_sort,
     get_multiplicity,
     get_head,
-    get_tail_to_multiplier_map
+    get_tail_to_multiplier_map,
+    get_source,
+    get_sink
 export is_hyper_graph, is_hyper_arc
 export new_path, new_network
 
