@@ -132,3 +132,7 @@ function get_shortest_path(sp_solution::BidirectionalSubproblemSolution, commodi
         sp_solution.commodity_to_shortest_path_solution[commodity], arc
     )
 end
+
+function get_node_potential(::BidirectionalSubproblemSolution, ::Vertex)
+    return 0.0
+end

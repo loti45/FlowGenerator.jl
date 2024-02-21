@@ -80,10 +80,19 @@ function _generate_columns!(pricing_solver::PricingSolver, commodity::Commodity,
     return paths
 end
 
-function get_reduced_cost(path::Path, pricing_solver::PricingSolver, commodity::Commodity, dual_solution::DualSolution)
+function get_reduced_cost(path::Path, pricing_solver::PricingSolver, commodity::Commodity, dual_solution::DualSolution; sp_solution = pricing_solver.sp_solution)
+    
     reduced_cost = sum(pricing_solver.arc_to_reduced_cost[arc] * multiplicity for (arc, multiplicity) in get_arc_to_multiplicity(path))
-    if get_head(path) == get_sink(commodity)
-        reduced_cost -= NetworkFlowModel.get_commodity_dual(dual_solution, commodity)
+    reduced_cost -= if get_head(path) == get_sink(commodity)
+        NetworkFlowModel.get_commodity_dual(dual_solution, commodity)
+    else 
+        get_node_potential(sp_solution, get_head(path))
+    end
+
+    for (tail, multiplier) in get_tail_to_multiplier_map(path)
+        if tail != get_source(commodity)
+            reduced_cost += get_node_potential(sp_solution, tail) * multiplier
+        end
     end
     return reduced_cost
 end
