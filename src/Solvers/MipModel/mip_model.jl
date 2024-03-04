@@ -52,7 +52,7 @@ function NetworkFlowMipModel(problem::NetworkFlowModel.Problem, params::MipSolve
         )
     end
     for arc in get_arcs(get_network(problem))
-        if get_capacity(problem, arc) < Inf
+        if has_capacity(problem, arc)
             output.arc_to_capacity_constraint[arc] = @constraint(
                 output.mip_model, 0.0 <= get_capacity(problem, arc)
             )
@@ -107,9 +107,9 @@ function add_column!(model::NetworkFlowMipModel, column::Column)
     # setting side constraints
     constr_index_to_coeff = Dict{Int,Float64}()
     for (arc, mult) in get_arc_to_multiplicity(column.hyper_tree)
-        for (index, coeff) in NetworkFlowModel.get_constr_coeff_list(model.problem, arc)
-            constr_index_to_coeff[index] =
-                get(constr_index_to_coeff, index, 0.0) + coeff * mult
+        for (constr, coeff) in NetworkFlowModel.get_constr_coeff_list(model.problem, arc)
+            constr_index_to_coeff[constr.index] =
+                get(constr_index_to_coeff, constr.index, 0.0) + coeff * mult
         end
     end
     for (index, coeff) in constr_index_to_coeff
@@ -144,6 +144,11 @@ Retrieve the dual solution from a solved NetworkFlowMipModel. Only works if the 
 """
 function get_dual_solution(model::NetworkFlowMipModel)
     digits = model.dual_decimal_precision
+    constraint_to_dual = IndexedMap{NetworkFlowModel.Constraint,Float64}(
+        get_constraints(model.problem),
+        constr -> round(dual(model.side_constrs[constr.index]); digits);
+        default = Inf,
+    )
     return NetworkFlowModel.DualSolution(
         Dict(
             commodity => round(dual(flow_data.demand_constraint); digits) for
@@ -153,10 +158,7 @@ function get_dual_solution(model::NetworkFlowMipModel)
             commodity => round(dual(flow_data.capacity_constraint); digits) for
             (commodity, flow_data) in model.commodity_to_flow_data
         ),
-        Dict(
-            constr => round(dual(model.side_constrs[constr.index]); digits) for
-            constr in NetworkFlowModel.get_constraints(model.problem)
-        ),
+        constraint_to_dual,
         Dict(
             arc => round(dual(constr); digits) for
             (arc, constr) in model.arc_to_capacity_constraint
@@ -182,7 +184,7 @@ function _add_constraint!(model, constr)
 end
 
 function _set_capacity_coeff!(model, arc, var; multiplicity = 1.0)
-    if get_capacity(model.problem, arc) < Inf
+    if has_capacity(model.problem, arc)
         set_normalized_coefficient(model.arc_to_capacity_constraint[arc], var, multiplicity)
     end
 end

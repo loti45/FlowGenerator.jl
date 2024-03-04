@@ -1,7 +1,7 @@
 name = "FlowGenerator"
 uuid = "7cc26b67-da99-4335-813f-c9198392f5f1"
 authors = ["Vinicius Loti de Lima"]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"

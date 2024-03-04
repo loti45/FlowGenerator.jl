@@ -15,7 +15,6 @@ include("column_generation.jl")
 
 struct Solution
     primal_solution::PrimalSolution
-    extended_dual_solution::ExtendedDualSolution
     rmp_columns::Vector{MipModel.Column}
     arc_to_min_obj_val::IndexedMap{Arc,Float64}
 end
@@ -31,9 +30,8 @@ function AbstractSolver.solve(
 
     return Solution(
         get_primal_solution(rmp),
-        pricing_solver.extended_dual_solution,
         get_current_columns(rmp),
-        get_arc_to_min_obj_val(pricing_solver.extended_dual_solution),
+        get_arc_to_min_obj_val(problem, pricing_solver.sp_solution),
     )
 end
 

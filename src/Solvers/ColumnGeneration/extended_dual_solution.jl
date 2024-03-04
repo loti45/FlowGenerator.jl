@@ -1,107 +1,57 @@
-# Dual solution with additional information mainly used for pricing and variable fixing.
-mutable struct ExtendedDualSolution
-    dual_solution::Union{DualSolution,Nothing}
+abstract type ExactSubproblemSolver end
+abstract type ExactSubproblemSolution end
+
+mutable struct BidirectionalSubproblemSolver <: ExactSubproblemSolver
     problem::NetworkFlowModel.Problem
     commodity_to_shortest_path_generator::Dict{
         Commodity,ShortestPathSolver.ShortestPathGenerator
     }
-    commodity_to_shortest_path_solution::Dict{
-        Commodity,ShortestPathSolver.ShortestPathSolution
-    }
-    arc_to_reduced_cost::IndexedMap{Arc,Float64} # Auxiliary map that's re-populated at each pricing iteration
-    dual_bound::Float64
 
-    function ExtendedDualSolution(problem::NetworkFlowModel.Problem)
+    function BidirectionalSubproblemSolver(problem::NetworkFlowModel.Problem)
         commodity_to_shortest_path_generator = Dict(
             commodity => ShortestPathSolver.build_shortest_path_generator(
                 problem.network, commodity.source, commodity.sink
             ) for commodity in get_commodities(problem)
         )
-        return new(
-            nothing,
-            problem,
-            commodity_to_shortest_path_generator,
-            Dict(),
-            IndexedMap{Arc,Float64}(get_arcs(problem); default = Inf),
-            Inf,
-        )
+        return new(problem, commodity_to_shortest_path_generator)
     end
 end
 
-function get_dual_bound(eds::ExtendedDualSolution)
-    return eds.dual_bound
+struct BidirectionalSubproblemSolution <: ExactSubproblemSolution
+    dual_bound::Float64
+    commodity_to_shortest_path_solution::Dict{
+        Commodity,ShortestPathSolver.ShortestPathSolution
+    }
 end
 
-# Update extended dual solution with new dual solution.
-function update_with_new_dual(
-    extended_dual_solution::ExtendedDualSolution, dual_solution::DualSolution
-)
-    extended_dual_solution.dual_solution = dual_solution
-    _fill_arc_to_reduced_cost_map!(extended_dual_solution)
-
-    for commodity in get_commodities(extended_dual_solution.problem)
-        shortest_path_generator = extended_dual_solution.commodity_to_shortest_path_generator[commodity]
-        solution = ShortestPathSolver.generate_shortest_path(
-            get_network(extended_dual_solution.problem),
-            extended_dual_solution.arc_to_reduced_cost;
-            solver = shortest_path_generator,
-        )
-        extended_dual_solution.commodity_to_shortest_path_solution[commodity] = solution
-    end
-
-    _compute_lagrangian_dual_bound(extended_dual_solution)
-    return nothing
-end
-
-# having this fill function separated, helps Julia with compile optimization
-function _fill_arc_to_reduced_cost_map!(extended_dual_solution::ExtendedDualSolution)
-    dual_solution = extended_dual_solution.dual_solution
-    side_constrs_dual = Vector{Float64}()
-    for constr in get_constraints(extended_dual_solution.problem)
-        push!(
-            side_constrs_dual,
-            NetworkFlowModel.get_side_constraint_dual(dual_solution, constr),
-        )
-    end
-
-    problem = extended_dual_solution.problem
-
-    for arc in get_arcs(problem)
-        extended_dual_solution.arc_to_reduced_cost[arc] =
-            get_cost(problem, arc) - sum(
-                coeff * side_constrs_dual[constr_index] for (constr_index, coeff) in
-                NetworkFlowModel.get_constr_coeff_list(extended_dual_solution.problem, arc);
-                init = 0.0,
-            )
-    end
-
-    for (arc, dual) in dual_solution.arc_capacity_to_dual_map
-        extended_dual_solution.arc_to_reduced_cost[arc] -= dual
-    end
-
-    return nothing
+function get_dual_bound(sp_solution::ExactSubproblemSolution)
+    return sp_solution.dual_bound
 end
 
 # Computes Lagrangian dual bound.
 # Assumption: problem is minimization
 # Commodity constraints are not dualized. Instead, they determine thw flow for each commodity.
-function _compute_lagrangian_dual_bound(eds::ExtendedDualSolution) # TODO : refactor implementation
-    dual_obj = NetworkFlowModel.get_obj_val(eds.problem, eds.dual_solution)
+function _compute_lagrangian_dual_bound(
+    dual_solution::DualSolution,
+    sp_solver::BidirectionalSubproblemSolver,
+    get_commodity_min_path_cost::Function,
+) # TODO : refactor implementation
+    dual_obj = NetworkFlowModel.get_obj_val(sp_solver.problem, dual_solution)
 
     # These values are discounted since the commodity demand/capacity constraints are not dualized
     dual_obj -= sum(
-        eds.dual_solution.commodity_to_demand_dual_map[commodity] * commodity.demand for
-        commodity in get_commodities(eds.problem);
+        dual_solution.commodity_to_demand_dual_map[commodity] * commodity.demand for
+        commodity in get_commodities(sp_solver.problem);
         init = 0.0,
     )
     dual_obj -= sum(
-        eds.dual_solution.commodity_to_capacity_dual_map[commodity] * commodity.capacity for
-        commodity in get_commodities(eds.problem);
+        dual_solution.commodity_to_capacity_dual_map[commodity] * commodity.capacity for
+        commodity in get_commodities(sp_solver.problem);
         init = 0.0,
     )
 
     function commodity_solution(commodity)
-        cost = _get_min_path_cost(eds, commodity)
+        cost = get_commodity_min_path_cost(commodity)
 
         # Choose flow quantity that's more attractive, considering it's a minimization problem
         flow = cost < 0 ? commodity.capacity : commodity.demand
@@ -110,41 +60,97 @@ function _compute_lagrangian_dual_bound(eds::ExtendedDualSolution) # TODO : refa
     end
 
     rc_sum = sum(
-        commodity_solution(commodity) for commodity in get_commodities(eds.problem),
+        commodity_solution(commodity) for commodity in get_commodities(sp_solver.problem),
         init in 0.0
     )
-    eds.dual_bound = dual_obj + rc_sum
-    return nothing
-end
-
-function _get_min_path_cost(eds::ExtendedDualSolution, commodity::Commodity)
-    return ShortestPathSolver.get_optimal_value_from_source(
-        eds.commodity_to_shortest_path_solution[commodity], commodity.sink
-    )
+    return dual_obj + rc_sum
 end
 
 # Returns a map from each arc to the sum of the dual bound and the reduced cost of sending one unit of flow through the arc
 # These values are relevant for reduced-cost variable-fixing
-function get_arc_to_min_obj_val(eds::ExtendedDualSolution)
-    dual_bound = get_dual_bound(eds)
+function get_arc_to_min_obj_val(
+    problem::NetworkFlowModel.Problem, sp_solution::ExactSubproblemSolution
+)
+    dual_bound = get_dual_bound(sp_solution)
 
-    is_hyper_graph = NetworkFlowModel.is_hyper_graph(get_network(eds.problem))
-    min_obj_val = arc -> if get_var_type(eds.problem, arc) == INTEGER && !is_hyper_graph
-        dual_bound + get_min_reduced_cost_in_a_commodity(eds, arc)
-    else
-        dual_bound
-    end
+    is_hyper_graph = NetworkFlowModel.is_hyper_graph(get_network(problem))
+    min_obj_val =
+        arc -> if get_var_type(problem, arc) == INTEGER && !is_hyper_graph
+            dual_bound + get_min_reduced_cost_in_a_commodity(sp_solution, arc)
+        else
+            dual_bound
+        end
 
     arc_to_min_obj_val = IndexedMap{Arc,Float64}(
-        get_arcs(eds.problem), min_obj_val; default = -Inf
+        get_arcs(problem), min_obj_val; default = -Inf
     )
 
     return arc_to_min_obj_val
 end
-function get_min_reduced_cost_in_a_commodity(eds::ExtendedDualSolution, arc::Arc)
+
+function solve!(
+    sp_solver::BidirectionalSubproblemSolver,
+    dual_solution::DualSolution,
+    arc_to_reduced_cost::IndexedMap{Arc,Float64},
+)
+    commodity_to_shortest_path_solution = Dict{
+        Commodity,ShortestPathSolver.ShortestPathSolution
+    }()
+    for commodity in get_commodities(sp_solver.problem)
+        shortest_path_generator = sp_solver.commodity_to_shortest_path_generator[commodity]
+        solution = ShortestPathSolver.generate_shortest_path(
+            get_network(sp_solver.problem),
+            arc_to_reduced_cost;
+            solver = shortest_path_generator,
+        )
+        commodity_to_shortest_path_solution[commodity] = solution
+    end
+
+    get_commodity_min_path_cost =
+        commodity -> ShortestPathSolver.get_optimal_value_from_source(
+            commodity_to_shortest_path_solution[commodity], commodity.sink
+        )
+
+    dual_bound = _compute_lagrangian_dual_bound(
+        dual_solution, sp_solver, get_commodity_min_path_cost
+    )
+    return BidirectionalSubproblemSolution(dual_bound, commodity_to_shortest_path_solution)
+end
+
+function get_min_reduced_cost_in_a_commodity(
+    sp_solution::BidirectionalSubproblemSolution, arc::Arc
+)
     return minimum(
         ShortestPathSolver.get_min_unit_flow_cost(sol, arc) for
-        sol in values(eds.commodity_to_shortest_path_solution);
+        sol in values(sp_solution.commodity_to_shortest_path_solution);
         init = Inf,
     )
+end
+
+function get_optimal_path(
+    sp_solution::BidirectionalSubproblemSolution, commodity::Commodity
+)
+    return ShortestPathSolver.get_optimal_path(
+        sp_solution.commodity_to_shortest_path_solution[commodity], commodity.sink
+    )
+end
+
+function get_shortest_path_cost(
+    sp_solution::BidirectionalSubproblemSolution, commodity::Commodity, arc::Arc
+)
+    return ShortestPathSolver.get_min_unit_flow_cost(
+        sp_solution.commodity_to_shortest_path_solution[commodity], arc
+    )
+end
+
+function get_shortest_path(
+    sp_solution::BidirectionalSubproblemSolution, commodity::Commodity, arc::Arc
+)
+    return ShortestPathSolver.get_min_unit_flow_path(
+        sp_solution.commodity_to_shortest_path_solution[commodity], arc
+    )
+end
+
+function get_node_potential(::BidirectionalSubproblemSolution, ::Vertex)
+    return 0.0
 end

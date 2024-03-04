@@ -33,6 +33,9 @@ function new_path(arcs::Vector{Arc})
     return Path(arcs)
 end
 
+get_head(path::Path) = get_head(path.hyper_tree)
+get_tail_to_multiplier_map(path::Path) = get_tail_to_multiplier_map(path.hyper_tree)
+
 Base.:(==)(p1::Path, p2::Path) = p1.hyper_tree == p2.hyper_tree
 Base.hash(p::Path, h::UInt) = hash(p.hyper_tree, h)
 
