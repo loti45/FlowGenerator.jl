@@ -103,16 +103,20 @@ end
 Propagate costs along the hyper tree from tails towards the head.
 """
 function propagate_costs(tree::HyperTree; arc_to_cost::Function, tail_to_cost::Function)
-
     vertex_to_incoming_arcs = _get_vertex_to_incoming_arcs_dictionary(get_arcs(tree))
     get_incoming_arc = v -> is_tail(tree, v) ? nothing : only(vertex_to_incoming_arcs[v])
 
-    vertex_to_cost = Dict{Vertex, Float64}()
+    vertex_to_cost = Dict{Vertex,Float64}()
     function get_cost!(v::Vertex)
         if !haskey(vertex_to_cost, v)
             arc = get_incoming_arc(v)
             vertex_to_cost[v] = if !isnothing(arc)
-                (arc_to_cost(arc) + sum(get_cost!(tail) * mult for (tail, mult) in get_tail_multiplier_list(arc))) * get_multiplicity(tree, arc)
+                (
+                    arc_to_cost(arc) + sum(
+                        get_cost!(tail) * mult for
+                        (tail, mult) in get_tail_multiplier_list(arc)
+                    )
+                ) * get_multiplicity(tree, arc)
             else
                 tail_to_cost(v)
             end

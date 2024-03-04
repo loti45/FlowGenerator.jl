@@ -13,10 +13,7 @@ mutable struct BidirectionalSubproblemSolver <: ExactSubproblemSolver
                 problem.network, commodity.source, commodity.sink
             ) for commodity in get_commodities(problem)
         )
-        return new(
-            problem,
-            commodity_to_shortest_path_generator,
-        )
+        return new(problem, commodity_to_shortest_path_generator)
     end
 end
 
@@ -34,7 +31,11 @@ end
 # Computes Lagrangian dual bound.
 # Assumption: problem is minimization
 # Commodity constraints are not dualized. Instead, they determine thw flow for each commodity.
-function _compute_lagrangian_dual_bound(dual_solution::DualSolution, sp_solver::BidirectionalSubproblemSolver, get_commodity_min_path_cost::Function) # TODO : refactor implementation
+function _compute_lagrangian_dual_bound(
+    dual_solution::DualSolution,
+    sp_solver::BidirectionalSubproblemSolver,
+    get_commodity_min_path_cost::Function,
+) # TODO : refactor implementation
     dual_obj = NetworkFlowModel.get_obj_val(sp_solver.problem, dual_solution)
 
     # These values are discounted since the commodity demand/capacity constraints are not dualized
@@ -67,15 +68,18 @@ end
 
 # Returns a map from each arc to the sum of the dual bound and the reduced cost of sending one unit of flow through the arc
 # These values are relevant for reduced-cost variable-fixing
-function get_arc_to_min_obj_val(problem::NetworkFlowModel.Problem, sp_solution::ExactSubproblemSolution)
+function get_arc_to_min_obj_val(
+    problem::NetworkFlowModel.Problem, sp_solution::ExactSubproblemSolution
+)
     dual_bound = get_dual_bound(sp_solution)
 
     is_hyper_graph = NetworkFlowModel.is_hyper_graph(get_network(problem))
-    min_obj_val = arc -> if get_var_type(problem, arc) == INTEGER && !is_hyper_graph
-        dual_bound + get_min_reduced_cost_in_a_commodity(sp_solution, arc)
-    else
-        dual_bound
-    end
+    min_obj_val =
+        arc -> if get_var_type(problem, arc) == INTEGER && !is_hyper_graph
+            dual_bound + get_min_reduced_cost_in_a_commodity(sp_solution, arc)
+        else
+            dual_bound
+        end
 
     arc_to_min_obj_val = IndexedMap{Arc,Float64}(
         get_arcs(problem), min_obj_val; default = -Inf
@@ -84,11 +88,14 @@ function get_arc_to_min_obj_val(problem::NetworkFlowModel.Problem, sp_solution::
     return arc_to_min_obj_val
 end
 
-
 function solve!(
-    sp_solver::BidirectionalSubproblemSolver, dual_solution::DualSolution, arc_to_reduced_cost::IndexedMap{Arc,Float64}
+    sp_solver::BidirectionalSubproblemSolver,
+    dual_solution::DualSolution,
+    arc_to_reduced_cost::IndexedMap{Arc,Float64},
 )
-    commodity_to_shortest_path_solution = Dict{Commodity,ShortestPathSolver.ShortestPathSolution}()
+    commodity_to_shortest_path_solution = Dict{
+        Commodity,ShortestPathSolver.ShortestPathSolution
+    }()
     for commodity in get_commodities(sp_solver.problem)
         shortest_path_generator = sp_solver.commodity_to_shortest_path_generator[commodity]
         solution = ShortestPathSolver.generate_shortest_path(
@@ -99,15 +106,20 @@ function solve!(
         commodity_to_shortest_path_solution[commodity] = solution
     end
 
-    get_commodity_min_path_cost = commodity -> ShortestPathSolver.get_optimal_value_from_source(
-        commodity_to_shortest_path_solution[commodity], commodity.sink
-    )
+    get_commodity_min_path_cost =
+        commodity -> ShortestPathSolver.get_optimal_value_from_source(
+            commodity_to_shortest_path_solution[commodity], commodity.sink
+        )
 
-    dual_bound = _compute_lagrangian_dual_bound(dual_solution, sp_solver, get_commodity_min_path_cost)
+    dual_bound = _compute_lagrangian_dual_bound(
+        dual_solution, sp_solver, get_commodity_min_path_cost
+    )
     return BidirectionalSubproblemSolution(dual_bound, commodity_to_shortest_path_solution)
 end
 
-function get_min_reduced_cost_in_a_commodity(sp_solution::BidirectionalSubproblemSolution, arc::Arc)
+function get_min_reduced_cost_in_a_commodity(
+    sp_solution::BidirectionalSubproblemSolution, arc::Arc
+)
     return minimum(
         ShortestPathSolver.get_min_unit_flow_cost(sol, arc) for
         sol in values(sp_solution.commodity_to_shortest_path_solution);
@@ -115,19 +127,25 @@ function get_min_reduced_cost_in_a_commodity(sp_solution::BidirectionalSubproble
     )
 end
 
-function get_optimal_path(sp_solution::BidirectionalSubproblemSolution, commodity::Commodity)
+function get_optimal_path(
+    sp_solution::BidirectionalSubproblemSolution, commodity::Commodity
+)
     return ShortestPathSolver.get_optimal_path(
         sp_solution.commodity_to_shortest_path_solution[commodity], commodity.sink
     )
 end
 
-function get_shortest_path_cost(sp_solution::BidirectionalSubproblemSolution, commodity::Commodity, arc::Arc)
+function get_shortest_path_cost(
+    sp_solution::BidirectionalSubproblemSolution, commodity::Commodity, arc::Arc
+)
     return ShortestPathSolver.get_min_unit_flow_cost(
         sp_solution.commodity_to_shortest_path_solution[commodity], arc
     )
 end
 
-function get_shortest_path(sp_solution::BidirectionalSubproblemSolution, commodity::Commodity, arc::Arc)
+function get_shortest_path(
+    sp_solution::BidirectionalSubproblemSolution, commodity::Commodity, arc::Arc
+)
     return ShortestPathSolver.get_min_unit_flow_path(
         sp_solution.commodity_to_shortest_path_solution[commodity], arc
     )

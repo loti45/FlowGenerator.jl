@@ -19,14 +19,13 @@ mutable struct PricingSolver
 end
 
 function pricing!(pricing_solver::PricingSolver, primal_solution, dual_solution)
-
     NetworkFlowModel.fill_arc_to_reduced_cost_map!(
-        pricing_solver.arc_to_reduced_cost,
-        pricing_solver.problem,
-        dual_solution,
+        pricing_solver.arc_to_reduced_cost, pricing_solver.problem, dual_solution
     )
 
-    pricing_solver.sp_solution = solve!(pricing_solver.sp_solver, dual_solution, pricing_solver.arc_to_reduced_cost)
+    pricing_solver.sp_solution = solve!(
+        pricing_solver.sp_solver, dual_solution, pricing_solver.arc_to_reduced_cost
+    )
     columns = MipModel.Column[]
 
     for commodity in get_commodities(pricing_solver.problem)
@@ -47,7 +46,9 @@ function pricing!(pricing_solver::PricingSolver, primal_solution, dual_solution)
     return columns
 end
 
-function _generate_columns!(pricing_solver::PricingSolver, commodity::Commodity, dual_solution::DualSolution)
+function _generate_columns!(
+    pricing_solver::PricingSolver, commodity::Commodity, dual_solution::DualSolution
+)
     if isempty(get_arcs(pricing_solver.problem))
         return []
     end
@@ -55,7 +56,11 @@ function _generate_columns!(pricing_solver::PricingSolver, commodity::Commodity,
 
     multiple_paths = pricing_solver.params.pricing_kind.pseudo_complementary
     paths = if multiple_paths && !is_hyper_graph(get_network(pricing_solver.problem))
-        _get_min_cover_shortest_paths(pricing_solver.problem, arc -> get_shortest_path(sp_solution, commodity, arc), arc -> get_shortest_path_cost(sp_solution, commodity, arc))
+        _get_min_cover_shortest_paths(
+            pricing_solver.problem,
+            arc -> get_shortest_path(sp_solution, commodity, arc),
+            arc -> get_shortest_path_cost(sp_solution, commodity, arc),
+        )
     else
         []
     end
@@ -64,12 +69,20 @@ function _generate_columns!(pricing_solver::PricingSolver, commodity::Commodity,
     push!(paths, optimal_path)
 
     min_rc = if !isempty(paths)
-        minimum(get_reduced_cost(path, pricing_solver, commodity, dual_solution) for path in paths)
+        minimum(
+            get_reduced_cost(path, pricing_solver, commodity, dual_solution) for
+            path in paths
+        )
     else
         0.0
     end
 
-    filter!(p -> get_reduced_cost(p, pricing_solver, commodity, dual_solution) < pricing_solver.params.min_rc_to_stop, paths)
+    filter!(
+        p ->
+            get_reduced_cost(p, pricing_solver, commodity, dual_solution) <
+            pricing_solver.params.min_rc_to_stop,
+        paths,
+    )
 
     dual_bound = get_dual_bound(pricing_solver.sp_solution)
 
@@ -80,12 +93,20 @@ function _generate_columns!(pricing_solver::PricingSolver, commodity::Commodity,
     return paths
 end
 
-function get_reduced_cost(path::Path, pricing_solver::PricingSolver, commodity::Commodity, dual_solution::DualSolution; sp_solution = pricing_solver.sp_solution)
-    
-    reduced_cost = sum(pricing_solver.arc_to_reduced_cost[arc] * multiplicity for (arc, multiplicity) in get_arc_to_multiplicity(path))
+function get_reduced_cost(
+    path::Path,
+    pricing_solver::PricingSolver,
+    commodity::Commodity,
+    dual_solution::DualSolution;
+    sp_solution = pricing_solver.sp_solution,
+)
+    reduced_cost = sum(
+        pricing_solver.arc_to_reduced_cost[arc] * multiplicity for
+        (arc, multiplicity) in get_arc_to_multiplicity(path)
+    )
     reduced_cost -= if get_head(path) == get_sink(commodity)
         NetworkFlowModel.get_commodity_dual(dual_solution, commodity)
-    else 
+    else
         get_node_potential(sp_solution, get_head(path))
     end
 
@@ -110,9 +131,7 @@ function _get_min_cover_shortest_paths(
         shortest_path_cost = arc_to_shortest_path_cost(arc)
         for (constr, _) in NetworkFlowModel.get_constr_coeff_list(problem, arc)
             if side_constr_to_best_arc_and_value[constr.index][2] > shortest_path_cost
-                side_constr_to_best_arc_and_value[constr.index] = (
-                    arc, shortest_path_cost
-                )
+                side_constr_to_best_arc_and_value[constr.index] = (arc, shortest_path_cost)
             end
         end
     end

@@ -144,7 +144,11 @@ Retrieve the dual solution from a solved NetworkFlowMipModel. Only works if the 
 """
 function get_dual_solution(model::NetworkFlowMipModel)
     digits = model.dual_decimal_precision
-    constraint_to_dual = IndexedMap{NetworkFlowModel.Constraint,Float64}(get_constraints(model.problem), constr -> round(dual(model.side_constrs[constr.index]); digits); default = Inf)
+    constraint_to_dual = IndexedMap{NetworkFlowModel.Constraint,Float64}(
+        get_constraints(model.problem),
+        constr -> round(dual(model.side_constrs[constr.index]); digits);
+        default = Inf,
+    )
     return NetworkFlowModel.DualSolution(
         Dict(
             commodity => round(dual(flow_data.demand_constraint); digits) for

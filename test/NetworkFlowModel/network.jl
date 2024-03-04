@@ -126,7 +126,9 @@ end
 
     tail_to_cost = Dict(v0 => 5.0, v5 => 1.0)
 
-    vertex_to_cost = FlowGenerator.NetworkFlowModel.propagate_costs(tree; arc_to_cost = x -> 10.0, tail_to_cost = a -> get(tail_to_cost, a, 0.0))
+    vertex_to_cost = FlowGenerator.NetworkFlowModel.propagate_costs(
+        tree; arc_to_cost = x -> 10.0, tail_to_cost = a -> get(tail_to_cost, a, 0.0)
+    )
 
     @test vertex_to_cost[v0] == 5.0
     @test vertex_to_cost[v1] == 50.0
@@ -135,5 +137,4 @@ end
     @test vertex_to_cost[v4] == 265.0
     @test vertex_to_cost[v5] == 1.0
     @test vertex_to_cost[v6] == 277.0
-
 end
